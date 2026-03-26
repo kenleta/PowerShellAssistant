@@ -1,38 +1,59 @@
-# ==============================================================================
-# POWERSHELL SMART-ASSISTANT DEPLOYER (Universal Version)
-# This script creates the directory, generates the PROFILE, and activates it.
-# ==============================================================================
+<#
+.SYNOPSIS
+    Universal PowerShell Assistant v1.1 (Production Ready)
+    Features: Auto-Backup, Anti-Duplicate, and Built-in Local Uninstall.
+#>
 
-# 1. Detect the correct $PROFILE path and directory for current environment
+# --- Configuration & Paths ---
 $targetProfilePath = $PROFILE
 $targetProfileDir = Split-Path $targetProfilePath
+$backupPath = "$targetProfilePath.bak"
+$startTag = "# <PS-ASSISTANT-START>"
+$endTag = "# <PS-ASSISTANT-END>"
 
-Write-Host "[*] Target Profile Path: $targetProfilePath" -ForegroundColor Cyan
-
-# 2. Create the directory structure if it doesn't exist (Handles OneDrive/Local automatically)
+# --- 1. Ensure Directory Exists ---
+# Create the PowerShell profile directory if it doesn't exist (Handles local or OneDrive)
 if (!(Test-Path $targetProfileDir)) {
-    Write-Host "[+] Creating missing directory: $targetProfileDir" -ForegroundColor Yellow
     New-Item -Path $targetProfileDir -ItemType Directory -Force | Out-Null
 }
 
-# 3. Define the full Assistant Logic (v1.0) with escaped variables
-# We use backticks (`) to escape $ so they are written as literals into the file.
-$scriptContent = @"
-# ================================
-# UNIVERSAL POWERSHELL ASSISTANT
-# ================================
+# --- 2. Backup & Anti-Duplicate Logic ---
+if (Test-Path $targetProfilePath) {
+    $existingContent = Get-Content $targetProfilePath -Raw
+    
+    # Check if the assistant is already injected to avoid duplicates
+    if ($existingContent -like "*$startTag*") {
+        Write-Host "[!] Assistant is already installed. Reloading existing profile..." -ForegroundColor Cyan
+        . $PROFILE
+        return
+    }
+    
+    # Create a .bak file only during the very first installation
+    if (!(Test-Path $backupPath)) {
+        Write-Host "[+] Creating initial backup: $(Split-Path $backupPath -Leaf)" -ForegroundColor Gray
+        Copy-Item -Path $targetProfilePath -Destination $backupPath -Force
+    }
+}
 
+# --- 3. Construct the Payload ---
+# This body contains the core logic and the uninstallation function
+$scriptBody = @"
+
+$startTag
+# ==============================================================================
+# UNIVERSAL POWERSHELL ASSISTANT (v1.1)
+# ==============================================================================
+
+# --- [ Core Intelligence Logic ] ---
 `$Global:ErrorMonitoringLogic = {
     `$lastError = `$error[0]
     if (!`$lastError) { return }
 
-    # CASE 1: Command Not Found (Module Installer)
+    # CASE 1: Command Not Found (Auto-Gallery Search)
     if (`$lastError.Exception -is [System.Management.Automation.CommandNotFoundException]) {
         `$cmdName = `$lastError.TargetObject
-        `$originalCommandLine = `$lastError.InvocationInfo.Line
-        
-        # Prevention: Ignore internal dependency checks
-        if (`$cmdName -eq 'Disable-FeedbackProvider' -or `$cmdName -eq 'Get-FeedbackProvider') { return }
+        `$originalLine = `$lastError.InvocationInfo.Line
+        if (`$cmdName -match 'Disable-FeedbackProvider|Get-FeedbackProvider') { return }
         
         try {
             Write-Host "`n[!] Intelligence: Command '`$cmdName' is missing." -ForegroundColor Yellow
@@ -40,52 +61,28 @@ $scriptContent = @"
             if ([string]::IsNullOrWhiteSpace(`$confirm) -or `$confirm -eq 'y') {
                 Write-Host "Searching..." -ForegroundColor Cyan
                 `$found = Find-Command -Name `$cmdName -ErrorAction Stop
-                
                 if (`$null -ne `$found -and ![string]::IsNullOrWhiteSpace(`$found.ModuleName)) {
                     `$modName = `$found.ModuleName
                     Write-Host "[+] Found in Module: `$modName" -ForegroundColor Green
                     `$install = (Read-Host "Install and Auto-Retry? (Y/n)").ToLower()
-                    
                     if ([string]::IsNullOrWhiteSpace(`$install) -or `$install -eq 'y') {
-                        Write-Host "Installing module..." -ForegroundColor Yellow
                         Install-Module -Name `$modName -Scope CurrentUser -Force -AllowClobber
                         Import-Module `$modName
-                        
-                        Write-Host "Ready! Preparing to re-run..." -ForegroundColor Green
-                        Start-Sleep -Seconds 1
                         Clear-Host
-                        Write-Host "[Auto-Retry] Executing: `$originalCommandLine" -ForegroundColor Cyan
-                        Write-Host "--------------------------------------------------------" -ForegroundColor Gray
-                        Invoke-Expression `$originalCommandLine
+                        Write-Host "[Auto-Retry] Executing: `$originalLine" -ForegroundColor Cyan
+                        Invoke-Expression `$originalLine
                     }
-                } else {
-                    Write-Warning "[-] No module found for '`$cmdName'."
-                }
+                } else { Write-Warning "[-] No module found." }
             }
-        }
-        catch {
-            if (`$_.Exception -is [System.Management.Automation.PipelineStoppedException]) {
-                Write-Host "`n[!] Interrupted by user." -ForegroundColor Gray
-            } else {
-                Write-Warning "[-] Search failed or interrupted."
-            }
-        }
-        finally {
-            if (`$lastError -and !`$lastError.PSObject.Properties['ErrorChecked']) {
-                `$lastError | Add-Member -MemberType NoteProperty -Name "ErrorChecked" -Value `$true -Force
-            }
-        }
+        } catch { }
+        finally { if (`$lastError -and !`$lastError.PSObject.Properties['ErrorChecked']) { `$lastError | Add-Member -MemberType NoteProperty -Name "ErrorChecked" -Value `$true -Force } }
     }
 
-    # CASE 2: CD Path with Spaces (The "Positional Parameter" Fix)
-    elseif (`$lastError.CategoryInfo.Activity -eq "Set-Location" -or 
-            `$lastError.FullyQualifiedErrorId -like "*PositionalParameter*" -or
-            `$lastError.Exception.Message -like "*positional parameter*") {
-        
+    # CASE 2: CD Space-Path Correction
+    elseif (`$lastError.CategoryInfo.Activity -eq "Set-Location" -or `$lastError.FullyQualifiedErrorId -like "*PositionalParameter*") {
         `$failedLine = `$lastError.InvocationInfo.Line
         if (`$failedLine -match "^\s*(cd|sl|Set-Location)\s+(.*)") {
             `$potentialPath = `$matches[2].Trim().Trim('"').Trim("'")
-            
             if (Test-Path `$potentialPath) {
                 Set-Location `$potentialPath
                 Write-Host "`n[🚀 Auto-Fix] Jumped to: `$potentialPath" -ForegroundColor Cyan
@@ -95,20 +92,39 @@ $scriptContent = @"
     }
 }
 
-# Environment Adaptation (Silent Detection)
-`$hasFeedbackCmd = Get-Command Disable-FeedbackProvider -ErrorAction SilentlyContinue
-if (`$hasFeedbackCmd) {
-    Disable-FeedbackProvider -Name 'General' -ErrorAction SilentlyContinue
+# --- [ Built-in Uninstallation Function ] ---
+function Global:Uninstall-Assistant {
+    Write-Host "[!] Initiating local uninstallation..." -ForegroundColor Yellow
+    `$pPath = "`$PROFILE"
+    `$bPath = "`$pPath.bak"
+    
+    if (Test-Path `$pPath) {
+        `$content = Get-Content `$pPath -Raw
+        `$pattern = "(?s)$startTag.*?$endTag"
+        if (`$content -match `$pattern) {
+            `$newContent = `$content -replace `$pattern, ""
+            `$newContent.Trim() | Out-File -FilePath `$pPath -Encoding utf8 -Force
+            Write-Host "[+] Assistant logic removed from profile." -ForegroundColor Green
+        }
+    }
+
+    if (Test-Path `$bPath) {
+        Write-Host "[+] Restoring original backup file..." -ForegroundColor Cyan
+        Copy-Item -Path `$bPath -Destination `$pPath -Force
+        Remove-Item `$bPath -Confirm:`$false
+        Write-Host "[+] Restore complete. Please restart your PowerShell session." -ForegroundColor Green
+    }
 }
 
-# Prompt Hook
+# --- [ Environment & Hooks ] ---
+`$hasFeedback = Get-Command Disable-FeedbackProvider -ErrorAction SilentlyContinue
+if (`$hasFeedback) { Disable-FeedbackProvider -Name 'General' -ErrorAction SilentlyContinue }
+
 function prompt {
     `$lastError = `$error[0]
     if (`$lastError -and !`$lastError.ErrorChecked) {
-        `$isCommandError = `$lastError.Exception -is [System.Management.Automation.CommandNotFoundException]
-        `$isCdError = (`$lastError.CategoryInfo.Activity -eq "Set-Location") -or (`$lastError.FullyQualifiedErrorId -like "*PositionalParameter*")
-        
-        if (`$isCommandError -or `$isCdError) {
+        if ((`$lastError.Exception -is [System.Management.Automation.CommandNotFoundException]) -or 
+            (`$lastError.CategoryInfo.Activity -eq "Set-Location") -or (`$lastError.FullyQualifiedErrorId -like "*PositionalParameter*")) {
             & `$Global:ErrorMonitoringLogic
             if (`$lastError -and !`$lastError.PSObject.Properties['ErrorChecked']) {
                 `$lastError | Add-Member -MemberType NoteProperty -Name "ErrorChecked" -Value `$true -Force
@@ -118,17 +134,18 @@ function prompt {
     "PS `$(`$executionContext.SessionState.Path.CurrentLocation)> "
 }
 
-Write-Host ">>> Universal Assistant v1.0 Loaded" -ForegroundColor Gray
+Write-Host ">>> Universal Assistant v1.1 Loaded (Type 'Uninstall-Assistant' to remove)" -ForegroundColor Gray
+$endTag
 "@
 
-# 4. Save the content to the PROFILE file with UTF8 encoding
-Write-Host "[+] Writing script to $targetProfilePath..." -ForegroundColor Cyan
-$scriptContent | Out-File -FilePath $targetProfilePath -Encoding utf8 -Force
+# --- 4. Deployment ---
+Write-Host "[+] Injecting Assistant into: $targetProfilePath" -ForegroundColor Cyan
+# Append the logic to ensure we don't break existing user scripts
+Add-Content -Path $targetProfilePath -Value $scriptBody -Encoding utf8
 
-# 5. Set Execution Policy to allow the profile to run
-Write-Host "[+] Setting Execution Policy to RemoteSigned..." -ForegroundColor Cyan
+# Set Execution Policy to allow the profile script to run
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
 
-# 6. Load the profile immediately
-Write-Host "[!] Deployment Successful. Activating Assistant..." -ForegroundColor Green
+# --- 5. Activation ---
+Write-Host "[!] Installation Successful. Profile activated." -ForegroundColor Green
 . $PROFILE
