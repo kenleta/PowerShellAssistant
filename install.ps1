@@ -15,7 +15,7 @@ if (!(Test-Path $targetProfileDir)) {
     New-Item -Path $targetProfileDir -ItemType Directory -Force | Out-Null
 }
 
-# 3. Define the full Assistant Logic (v2.5) with escaped variables
+# 3. Define the full Assistant Logic (v1.0) with escaped variables
 # We use backticks (`) to escape $ so they are written as literals into the file.
 $scriptContent = @"
 # ================================
@@ -118,7 +118,7 @@ function prompt {
     "PS `$(`$executionContext.SessionState.Path.CurrentLocation)> "
 }
 
-Write-Host ">>> Universal Assistant v2.5 Loaded" -ForegroundColor Gray
+Write-Host ">>> Universal Assistant v1.0 Loaded" -ForegroundColor Gray
 "@
 
 # 4. Save the content to the PROFILE file with UTF8 encoding
