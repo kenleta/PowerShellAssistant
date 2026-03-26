@@ -28,9 +28,9 @@ When you type a command that isn't installed (e.g., \Connect-AzAccount\), the as
 
 Copy and paste this command into your PowerShell terminal:
 
-\\\powershell
+```powershell
 iex (irm bit.ly/4bApAGU)
-\\\
+```
 
 ---
 
@@ -50,8 +50,8 @@ iex (irm bit.ly/4bApAGU)
 
 | Action | Command |
 | :--- | :--- |
-| **Install** | \iex (irm bit.ly/4bApAGU)\ |
-| **Uninstall** | \Uninstall-Assistant\ |
+| **Install** | `iex (irm bit.ly/4bApAGU)` |
+| **Uninstall** | `Uninstall-Assistant` |
 
 ---
 
