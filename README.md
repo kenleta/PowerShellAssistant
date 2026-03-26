@@ -12,7 +12,7 @@ Stop worrying about quotes! If you copy a path containing spaces, just type `cd 
 * **Result:** Successfully jumps to the directory without manual quotes.
 
 ### 2. 📦 Auto-Module Installer & Retry
-When you type a command that isn't installed (e.g., \Connect-AzAccount\), the assistant will:
+When you type a command that isn't installed (e.g., `Connect-AzAccount`), the assistant will:
 1. Search the **PowerShell Gallery**.
 2. Identify the required module.
 3. Offer to install and **Auto-Retry** your original command.
