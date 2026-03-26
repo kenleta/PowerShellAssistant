@@ -1,4 +1,4 @@
-# 🚀 Universal PowerShell Smart Assistant (v2.5)
+# 🚀 Universal PowerShell Smart Assistant (v1.0)
 
 A lightweight, intelligent script to supercharge your PowerShell experience. This assistant automates module installation for missing commands and fixes common "path with spaces" errors in real-time.
 
