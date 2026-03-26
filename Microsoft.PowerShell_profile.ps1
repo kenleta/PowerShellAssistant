@@ -101,4 +101,4 @@ function prompt {
     "PS $($executionContext.SessionState.Path.CurrentLocation)> "
 }
 
-Write-Host ">>> Universal Assistant v2.5 Loaded" -ForegroundColor Gray
+Write-Host ">>> Universal Assistant v1.0 Loaded" -ForegroundColor Gray
