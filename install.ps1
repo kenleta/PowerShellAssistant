@@ -18,9 +18,9 @@ if (!(Test-Path $targetProfileDir)) {
 # 3. Define the full Assistant Logic (v2.5) with escaped variables
 # We use backticks (`) to escape $ so they are written as literals into the file.
 $scriptContent = @"
-# ==============================================================================
-# UNIVERSAL POWERSHELL ASSISTANT (v2.5 - Stable CD-Fix & Auto-Retry)
-# ==============================================================================
+# ================================
+# UNIVERSAL POWERSHELL ASSISTANT
+# ================================
 
 `$Global:ErrorMonitoringLogic = {
     `$lastError = `$error[0]

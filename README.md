@@ -24,9 +24,9 @@ When you type a command that isn't installed (e.g., \Connect-AzAccount\), the as
 
 Simply copy and paste this command into your PowerShell terminal to deploy the assistant globally on any networked PC:
 
-\\\powershell
+```powershell
 iex (irm bit.ly/4bApAGU)
-\\\
+```
 
 ---
 

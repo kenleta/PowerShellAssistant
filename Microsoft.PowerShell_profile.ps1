@@ -1,6 +1,6 @@
-# ==============================================================================
-# UNIVERSAL POWERSHELL ASSISTANT (v2.5 - Stable CD-Fix & Auto-Retry)
-# ==============================================================================
+# ================================
+# UNIVERSAL POWERSHELL ASSISTANT
+# ================================
 
 $Global:ErrorMonitoringLogic = {
     $lastError = $error[0]
