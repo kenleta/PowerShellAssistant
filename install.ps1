@@ -44,8 +44,15 @@ $startTag
 # UNIVERSAL POWERSHELL ASSISTANT (v1.1)
 # ==============================================================================
 
+param([string]`$State)
+
+if (`$State -eq "-Off") { `$Global:PSAssistantEnabled = `$false }
+elseif (`$State -eq "-On") { `$Global:PSAssistantEnabled = `$true }
+elseif (`$null -eq `$Global:PSAssistantEnabled) { `$Global:PSAssistantEnabled = `$true } # Default to On
+
 # --- [ Core Intelligence Logic ] ---
 `$Global:ErrorMonitoringLogic = {
+    if (`$Global:PSAssistantEnabled -eq `$false) { return }
     `$lastError = `$error[0]
     if (!`$lastError) { return }
 
@@ -121,21 +128,30 @@ function Global:Uninstall-Assistant {
 if (`$hasFeedback) { Disable-FeedbackProvider -Name 'General' -ErrorAction SilentlyContinue }
 
 function prompt {
-    `$lastError = `$error[0]
-    if (`$lastError -and !`$lastError.ErrorChecked) {
-        if ((`$lastError.Exception -is [System.Management.Automation.CommandNotFoundException]) -or 
-            (`$lastError.CategoryInfo.Activity -eq "Set-Location") -or (`$lastError.FullyQualifiedErrorId -like "*PositionalParameter*")) {
-            & `$Global:ErrorMonitoringLogic
-            if (`$lastError -and !`$lastError.PSObject.Properties['ErrorChecked']) {
-                `$lastError | Add-Member -MemberType NoteProperty -Name "ErrorChecked" -Value `$true -Force
+    `$currentPath = `$executionContext.SessionState.Path.CurrentLocation
+
+    if (`$Global:PSAssistantEnabled -ne `$false) {
+        `$lastError = `$error[0]
+        if (`$lastError -and !`$lastError.ErrorChecked) {
+            if ((`$lastError.Exception -is [System.Management.Automation.CommandNotFoundException]) -or 
+                (`$lastError.CategoryInfo.Activity -eq "Set-Location") -or (`$lastError.FullyQualifiedErrorId -like "*PositionalParameter*")) {
+                & `$Global:ErrorMonitoringLogic
+                if (`$lastError -and !`$lastError.PSObject.Properties['ErrorChecked']) {
+                    `$lastError | Add-Member -MemberType NoteProperty -Name "ErrorChecked" -Value `$true -Force
+                }
             }
         }
+        `$statusPrefix = "
+    } else {
+        `$statusPrefix = "[OFF] " # Visual indicator when disabled
     }
-    "PS `$(`$executionContext.SessionState.Path.CurrentLocation)> "
+    "PS `$($statusPrefix)`$($currentPath)> "
 }
 
+`$modeStr = if (`$Global:PSAssistantEnabled) { "ENABLED" } else { "DISABLED" }
 Write-Host ">>> Universal Assistant v1.1 Loaded (Type 'Uninstall-Assistant' to remove)" -ForegroundColor Gray
-$endTag
+Write-Host "    Hint: Use '. `$PROFILE -Off' to disable features temporarily." -ForegroundColor DarkGray
+`$endTag
 "@
 
 # --- 4. Deployment ---
